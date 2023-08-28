@@ -1,2 +1,0 @@
-class MarketVendors < ApplicationRecord
-end
