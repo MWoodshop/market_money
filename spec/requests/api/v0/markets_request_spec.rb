@@ -1,6 +1,7 @@
 require 'rails_helper'
 
 describe 'Markets API' do
+  # Happy Path
   it 'sends a list of markets' do
     markets = create_list(:market, 3)
     markets.each do |market|
@@ -48,5 +49,22 @@ describe 'Markets API' do
       expect(market[:vendor_count]).to be_an(Integer)
       expect(market[:vendor_count]).to eq(2)
     end
+  end
+
+  it 'returns an empty array if no markets exist' do
+    get '/api/v0/markets'
+
+    expect(response).to be_successful
+    markets = JSON.parse(response.body, symbolize_names: true)
+
+    expect(markets).to eq([])
+  end
+
+  it 'returns a 500 error when something goes wrong on the server' do
+    allow(Market).to receive(:all).and_raise(StandardError.new('Something went wrong'))
+
+    get '/api/v0/markets'
+
+    expect(response).to have_http_status(500)
   end
 end
