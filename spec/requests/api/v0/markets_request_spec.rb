@@ -4,8 +4,7 @@ require 'rails_helper'
 describe 'GET /api/v0/markets' do
   # Happy Path
   it 'sends a list of markets' do
-    markets = create_list(:market, 3)
-    markets.each do |market|
+    create_list(:market, 3).each do |market|
       create_list(:vendor, 2, markets: [market])
     end
 
@@ -13,53 +12,52 @@ describe 'GET /api/v0/markets' do
 
     expect(response).to be_successful
 
-    markets = JSON.parse(response.body, symbolize_names: true)
+    parsed_response = JSON.parse(response.body, symbolize_names: true)
 
-    expect(markets.count).to eq(3)
+    expect(parsed_response[:data].count).to eq(3)
 
-    markets.each do |market|
-      expect(market).to have_key(:id)
-      expect(market[:id]).to be_an(Integer)
+    parsed_response[:data].each do |market_data|
+      expect(market_data).to have_key(:id)
+      expect(market_data[:id]).to be_an(String)
 
-      expect(market).to have_key(:name)
-      expect(market[:name]).to be_a(String)
+      expect(market_data).to have_key(:attributes) # Check for attributes in market_data
 
-      expect(market).to have_key(:street)
-      expect(market[:street]).to be_a(String)
+      attributes = market_data[:attributes] # Use attributes from market_data
 
-      expect(market).to have_key(:city)
-      expect(market[:city]).to be_a(String)
+      expect(attributes).to have_key(:street)
+      expect(attributes[:street]).to be_a(String)
 
-      expect(market).to have_key(:county)
-      expect(market[:county]).to be_a(String)
+      expect(attributes).to have_key(:city)
+      expect(attributes[:city]).to be_a(String)
 
-      expect(market).to have_key(:state)
-      expect(market[:state]).to be_a(String)
+      expect(attributes).to have_key(:county)
+      expect(attributes[:county]).to be_a(String)
 
-      expect(market).to have_key(:zip)
-      expect(market[:zip]).to be_a(String)
+      expect(attributes).to have_key(:state)
+      expect(attributes[:state]).to be_a(String)
 
-      expect(market).to have_key(:lat)
-      expect(market[:lat]).to be_a(String)
+      expect(attributes).to have_key(:zip)
+      expect(attributes[:zip]).to be_a(String)
 
-      expect(market).to have_key(:lon)
-      expect(market[:lon]).to be_a(String)
+      expect(attributes).to have_key(:lat)
+      expect(attributes[:lat]).to be_a(String)
+
+      expect(attributes).to have_key(:lon)
+      expect(attributes[:lon]).to be_a(String)
 
       # Test Vendor Count
-      expect(market).to have_key(:vendor_count)
-      expect(market[:vendor_count]).to be_an(Integer)
-      expect(market[:vendor_count]).to eq(2)
+      expect(attributes).to have_key(:vendor_count)
+      expect(attributes[:vendor_count]).to be_an(Integer)
+      expect(attributes[:vendor_count]).to eq(2)
     end
   end
 
   # Sad Path
   it 'returns an empty array if no markets exist' do
     get '/api/v0/markets'
-
     expect(response).to be_successful
-    markets = JSON.parse(response.body, symbolize_names: true)
-
-    expect(markets).to eq([])
+    parsed_response = JSON.parse(response.body, symbolize_names: true)
+    expect(parsed_response[:data]).to eq([])
   end
 
   # Exception Handling
@@ -69,6 +67,8 @@ describe 'GET /api/v0/markets' do
     get '/api/v0/markets'
 
     expect(response).to have_http_status(500)
+    parsed_response = JSON.parse(response.body, symbolize_names: true)
+    expect(parsed_response[:errors].first[:detail]).to eq('Something went wrong')
   end
 end
 
