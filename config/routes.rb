@@ -1,7 +1,12 @@
 Rails.application.routes.draw do
   namespace :api do
     namespace :v0 do
-      resources :markets, only: %i[index show]
+      # Get all markets and get one market
+      resources :markets, only: %i[index show] do
+        # Get all vendors for a specific market
+        resources :vendors, controller: 'market_vendors', only: [:index]
+      end
+      resources :vendors, only: [:index] # CRUD for vendors
     end
   end
 end
