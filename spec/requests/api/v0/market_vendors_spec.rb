@@ -12,31 +12,29 @@ describe 'GET /api/v0/markets/:id/vendors' do
 
     expect(vendor_data.count).to eq(3)
 
-    vendor_data.each do |vendor|
-      expect(vendor).to have_key(:id)
-      expect(vendor[:id]).to be_a(String)
+    returned_vendor_ids = vendor_data.map { |vendor| vendor[:id].to_i }
+    expected_vendor_ids = vendors.map(&:id)
 
-      expect(vendor).to have_key(:type)
-      expect(vendor[:type]).to eq('vendors')
+    expect(returned_vendor_ids).to match_array(expected_vendor_ids)
 
-      expect(vendor).to have_key(:attributes)
+    vendor_data.each do |returned_vendor|
+      corresponding_vendor = vendors.find { |vendor| vendor.id == returned_vendor[:id].to_i }
 
-      attributes = vendor[:attributes]
+      expect(returned_vendor).to have_key(:id)
+      expect(returned_vendor[:id].to_i).to eq(corresponding_vendor.id)
 
-      expect(attributes).to have_key(:name)
-      expect(attributes[:name]).to be_a(String)
+      expect(returned_vendor).to have_key(:type)
+      expect(returned_vendor[:type]).to eq('vendors')
 
-      expect(attributes).to have_key(:description)
-      expect(attributes[:description]).to be_a(String)
+      expect(returned_vendor).to have_key(:attributes)
 
-      expect(attributes).to have_key(:contact_name)
-      expect(attributes[:contact_name]).to be_a(String)
+      attributes = returned_vendor[:attributes]
 
-      expect(attributes).to have_key(:contact_phone)
-      expect(attributes[:contact_phone]).to be_a(String)
-
-      expect(attributes).to have_key(:credit_accepted)
-      expect(attributes[:credit_accepted]).to be_in([true, false])
+      expect(attributes[:name]).to eq(corresponding_vendor.name)
+      expect(attributes[:description]).to eq(corresponding_vendor.description)
+      expect(attributes[:contact_name]).to eq(corresponding_vendor.contact_name)
+      expect(attributes[:contact_phone]).to eq(corresponding_vendor.contact_phone)
+      expect(attributes[:credit_accepted]).to eq(corresponding_vendor.credit_accepted)
     end
   end
 
@@ -47,7 +45,7 @@ describe 'GET /api/v0/markets/:id/vendors' do
     expect(response).to have_http_status(404)
 
     errors = JSON.parse(response.body, symbolize_names: true)[:errors]
-    expect(errors.first[:detail]).to eq('Couldn\'t find Market with \'id\'=123123123123123')
+    expect(errors.first[:detail]).to eq("Couldn't find Market with 'id'=123123123123123")
   end
 
   # Exception Handling
