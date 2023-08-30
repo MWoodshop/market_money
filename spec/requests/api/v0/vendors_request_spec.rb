@@ -97,6 +97,7 @@ describe 'GET /api/v0/vendors/:id' do
 
   # Update a Vendor
   describe 'PATCH /api/v0/vendors/:id' do
+    # Happy Path
     it 'updates an existing vendor with all required attributes' do
       vendor = create(:vendor)
 
@@ -159,6 +160,74 @@ describe 'GET /api/v0/vendors/:id' do
 
       expect(json['errors']).to be_present
       expect(json['errors'].first['detail']).to eq("Couldn't find Vendor with 'id'=123123123123")
+    end
+
+    it 'returns a 500 error when something goes wrong on the server' do
+      vendor = Vendor.create(
+        name: 'New Name',
+        description: 'New Description',
+        contact_name: 'New Contact',
+        contact_phone: '123-456-7890',
+        credit_accepted: true
+      )
+      update_params = {
+        name: 'Updated Name',
+        description: 'Updated Description',
+        contact_name: 'Updated Contact',
+        contact_phone: '123-456-7890',
+        credit_accepted: false
+      }
+
+      allow(Vendor).to receive(:find).and_raise(StandardError.new('Something went wrong'))
+
+      patch "/api/v0/vendors/#{vendor.id}", params: { vendor: update_params }
+
+      expect(response).to have_http_status(500)
+    end
+  end
+
+  # Delete a Vendor
+  describe 'DELETE /api/v0/vendors/:id' do
+    # Happy Path
+    it 'deletes an existing vendor and returns a 204' do
+      vendor = Vendor.create(
+        name: 'Test Vendor',
+        description: 'Test Description',
+        contact_name: 'Test Contact',
+        contact_phone: '123-456-7890',
+        credit_accepted: true
+      )
+
+      delete "/api/v0/vendors/#{vendor.id}"
+
+      expect(response).to have_http_status(204)
+
+      expect { Vendor.find(vendor.id) }.to raise_error(ActiveRecord::RecordNotFound)
+    end
+
+    # Sad Path
+    it 'returns a 404 error if vendor does not exist' do
+      delete '/api/v0/vendors/123123123123'
+
+      expect(response).to have_http_status(404)
+
+      expect(JSON.parse(response.body)['errors'].first['detail']).to eq("Couldn't find Vendor with 'id'=123123123123")
+    end
+
+    it 'returns a 500 error when something goes wrong on the server' do
+      vendor = Vendor.create(
+        name: 'Test Vendor',
+        description: 'Test Description',
+        contact_name: 'Test Contact',
+        contact_phone: '123-456-7890',
+        credit_accepted: true
+      )
+
+      allow(Vendor).to receive(:find).and_raise(StandardError.new('Something went wrong'))
+
+      delete "/api/v0/vendors/#{vendor.id}"
+
+      expect(response).to have_http_status(500)
     end
   end
 end

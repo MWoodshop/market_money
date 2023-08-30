@@ -38,6 +38,20 @@ class Api::V0::VendorsController < ApplicationController
     render json: { errors: [{ detail: e.message }] }, status: 500
   end
 
+  # 7. Delete a Vendor
+  def destroy
+    vendor = Vendor.find(params[:id])
+    vendor.destroy
+
+    # Send back a 204 No Content response
+    render json: {}, status: :no_content
+  rescue ActiveRecord::RecordNotFound => e
+    render json: { errors: [{ detail: e.message }] }, status: :not_found
+  rescue StandardError => e
+    render json: { errors: [{ detail: e.message }] }, status: 500
+
+  end
+
   private
 
   def vendor_params
