@@ -1,3 +1,4 @@
+# Get All Vendors for a Market
 describe 'GET /api/v0/markets/:id/vendors' do
   # Happy Path
   it 'sends a list of vendors for a specific market' do
@@ -58,5 +59,41 @@ describe 'GET /api/v0/markets/:id/vendors' do
 
     errors = JSON.parse(response.body, symbolize_names: true)[:errors]
     expect(errors.first[:detail]).to include('Something went wrong')
+  end
+end
+
+# Create a Market Vendor
+describe 'POST /api/v0/market_vendors' do
+  # Happy Path
+  it 'adds a vendor to a market with valid market and vendor IDs' do
+    market = create(:market)
+    vendor = create(:vendor)
+
+    post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: vendor.id }
+
+    expect(response).to have_http_status(201)
+  end
+
+  # Sad Path
+  it 'returns a 404 error when invalid market or vendor ID is provided' do
+    post '/api/v0/market_vendors', params: { market_id: 123_123_123_123_123, vendor_id: 123_123_123_123_123 }
+    expect(response).to have_http_status(404)
+  end
+
+  it 'returns 422 when a duplicate MarketVendor is created' do
+    market = create(:market)
+    vendor = create(:vendor)
+    MarketVendor.create(market:, vendor:)
+
+    post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: vendor.id }
+    expect(response).to have_http_status(422)
+  end
+
+  # Exception Handling
+  it 'returns a 500 error when something goes wrong on the server' do
+    allow(Market).to receive(:find).and_raise(StandardError.new('Something went wrong'))
+
+    post '/api/v0/market_vendors', params: { market_id: 1, vendor_id: 1 }
+    expect(response).to have_http_status(500)
   end
 end
