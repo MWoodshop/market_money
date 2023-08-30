@@ -2,19 +2,14 @@ class Api::V0::VendorsController < ApplicationController
   # 4. Get One Vendor
   def show
     vendor = Vendor.find(params[:id])
-    render json: {
-      data: {
-        id: vendor.id.to_s,
-        type: 'vendor',
-        attributes: vendor.attributes
-      }
-    }, status: 200
+    render json: VendorSerializer.new(vendor).serializable_hash.to_json, status: :ok
   rescue ActiveRecord::RecordNotFound => e
     render json: { errors: [{ detail: e.message }] }, status: 404
   rescue StandardError => e
     render json: { errors: [{ detail: e.message }] }, status: 500
   end
 
+  # 5. Create a Vendor
   def create
     vendor = Vendor.new(vendor_params)
     if vendor.save
@@ -22,6 +17,23 @@ class Api::V0::VendorsController < ApplicationController
     else
       render json: { errors: vendor.errors.full_messages }, status: :bad_request
     end
+  rescue StandardError => e
+    render json: { errors: [{ detail: e.message }] }, status: 500
+  end
+
+  # 6. Update a Vendor
+  def update
+    # Find the existing vendor
+    vendor = Vendor.find(params[:id])
+
+    # Update the vendor with the new attributes
+    if vendor.update(vendor_params)
+      render json: VendorSerializer.new(vendor).serializable_hash.to_json, status: :ok
+    else
+      render json: { errors: vendor.errors.full_messages }, status: :bad_request
+    end
+  rescue ActiveRecord::RecordNotFound => e
+    render json: { errors: [{ detail: e.message }] }, status: :not_found
   rescue StandardError => e
     render json: { errors: [{ detail: e.message }] }, status: 500
   end
