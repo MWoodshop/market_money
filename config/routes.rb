@@ -6,7 +6,7 @@ Rails.application.routes.draw do
         # Get all vendors for a specific market
         resources :vendors, controller: 'market_vendors', only: [:index]
       end
-      resources :vendors, only: %i[index show] # CRUD for vendors
+      resources :vendors, only: %i[index show create] # CRUD for vendors
     end
   end
 end
