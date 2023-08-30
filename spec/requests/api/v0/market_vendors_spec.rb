@@ -24,7 +24,7 @@ describe 'GET /api/v0/markets/:id/vendors' do
       expect(returned_vendor[:id].to_i).to eq(corresponding_vendor.id)
 
       expect(returned_vendor).to have_key(:type)
-      expect(returned_vendor[:type]).to eq('vendors')
+      expect(returned_vendor[:type]).to eq('vendor')
 
       expect(returned_vendor).to have_key(:attributes)
 
