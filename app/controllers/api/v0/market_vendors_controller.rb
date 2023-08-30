@@ -1,4 +1,5 @@
 class Api::V0::MarketVendorsController < ApplicationController
+  # Get All Vendors for a Market
   def index
     market = Market.find(params[:market_id])
     vendors = market.vendors

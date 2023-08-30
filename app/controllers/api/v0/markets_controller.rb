@@ -1,4 +1,5 @@
 class Api::V0::MarketsController < ApplicationController
+  # 1. Get All Markets
   def index
     markets = Market.all
     render json: { data: markets.map do |market|
@@ -12,6 +13,7 @@ class Api::V0::MarketsController < ApplicationController
     render json: { errors: [{ detail: e.message }] }, status: 500
   end
 
+  # 2. Get One Market
   def show
     market = Market.find(params[:id])
     render json: {
