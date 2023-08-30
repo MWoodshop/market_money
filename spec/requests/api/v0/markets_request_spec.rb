@@ -74,6 +74,7 @@ end
 
 # Get One Market by ID
 describe 'GET /api/v0/markets/:id' do
+  # Happy Path
   it 'sends a single market by id' do
     market = create(:market)
     create_list(:vendor, 1, markets: [market])
