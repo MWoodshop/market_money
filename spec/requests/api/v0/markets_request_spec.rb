@@ -4,48 +4,46 @@ require 'rails_helper'
 describe 'GET /api/v0/markets' do
   # Happy Path
   it 'sends a list of markets' do
-    create_list(:market, 3).each do |market|
+    created_markets = create_list(:market, 3)
+    created_markets.each do |market|
       create_list(:vendor, 2, markets: [market])
     end
 
     get '/api/v0/markets'
 
-    expect(response).to be_successful
+    expect(response).to have_http_status(200)
 
     parsed_response = JSON.parse(response.body, symbolize_names: true)
 
+    # Validate the number of returned markets
     expect(parsed_response[:data].count).to eq(3)
 
-    parsed_response[:data].each do |market_data|
-      expect(market_data).to have_key(:id)
-      expect(market_data[:id]).to be_an(String)
+    returned_market_ids = parsed_response[:data].map { |market| market[:id].to_i }
+    expected_market_ids = created_markets.map(&:id)
 
-      expect(market_data).to have_key(:attributes) # Check for attributes in market_data
+    expect(returned_market_ids).to match_array(expected_market_ids)
 
-      attributes = market_data[:attributes] # Use attributes from market_data
+    # Iterate through each returned market
+    parsed_response[:data].each do |returned_market|
+      corresponding_market = created_markets.find { |market| market.id == returned_market[:id].to_i }
 
-      expect(attributes).to have_key(:street)
-      expect(attributes[:street]).to be_a(String)
+      # Validate keys and actual data
+      expect(returned_market).to have_key(:id)
+      expect(returned_market[:id].to_i).to eq(corresponding_market.id)
 
-      expect(attributes).to have_key(:city)
-      expect(attributes[:city]).to be_a(String)
+      expect(returned_market).to have_key(:attributes)
 
-      expect(attributes).to have_key(:county)
-      expect(attributes[:county]).to be_a(String)
+      attributes = returned_market[:attributes]
 
-      expect(attributes).to have_key(:state)
-      expect(attributes[:state]).to be_a(String)
+      expect(attributes[:street]).to eq(corresponding_market.street)
+      expect(attributes[:city]).to eq(corresponding_market.city)
+      expect(attributes[:county]).to eq(corresponding_market.county)
+      expect(attributes[:state]).to eq(corresponding_market.state)
+      expect(attributes[:zip]).to eq(corresponding_market.zip)
+      expect(attributes[:lat]).to eq(corresponding_market.lat)
+      expect(attributes[:lon]).to eq(corresponding_market.lon)
 
-      expect(attributes).to have_key(:zip)
-      expect(attributes[:zip]).to be_a(String)
-
-      expect(attributes).to have_key(:lat)
-      expect(attributes[:lat]).to be_a(String)
-
-      expect(attributes).to have_key(:lon)
-      expect(attributes[:lon]).to be_a(String)
-
-      # Test Vendor Count
+      # Validate vendor count
       expect(attributes).to have_key(:vendor_count)
       expect(attributes[:vendor_count]).to be_an(Integer)
       expect(attributes[:vendor_count]).to eq(2)
@@ -55,6 +53,7 @@ describe 'GET /api/v0/markets' do
   # Sad Path
   it 'returns an empty array if no markets exist' do
     get '/api/v0/markets'
+
     expect(response).to be_successful
     parsed_response = JSON.parse(response.body, symbolize_names: true)
     expect(parsed_response[:data]).to eq([])
@@ -85,19 +84,24 @@ describe 'GET /api/v0/markets/:id' do
 
     market_data = JSON.parse(response.body, symbolize_names: true)[:data]
 
+    # Validate ID and type
     expect(market_data[:id].to_i).to eq(market.id)
-    expect(market_data[:attributes][:name]).to be_a(String)
-    expect(market_data[:attributes][:street]).to be_a(String)
-    expect(market_data[:attributes][:city]).to be_a(String)
-    expect(market_data[:attributes][:county]).to be_a(String)
-    expect(market_data[:attributes][:state]).to be_a(String)
-    expect(market_data[:attributes][:zip]).to be_a(String)
-    expect(market_data[:attributes][:lat]).to be_a(String)
-    expect(market_data[:attributes][:lon]).to be_a(String)
 
-    # Testing Vendor Count is correct
-    expect(market_data[:attributes][:vendor_count]).to be_an(Integer)
-    expect(market_data[:attributes][:vendor_count]).to eq(1)
+    # Validate attributes
+    attributes = market_data[:attributes]
+
+    expect(attributes[:name]).to eq(market.name)
+    expect(attributes[:street]).to eq(market.street)
+    expect(attributes[:city]).to eq(market.city)
+    expect(attributes[:county]).to eq(market.county)
+    expect(attributes[:state]).to eq(market.state)
+    expect(attributes[:zip]).to eq(market.zip)
+    expect(attributes[:lat]).to eq(market.lat)
+    expect(attributes[:lon]).to eq(market.lon)
+
+    # Validate vendor count
+    expect(attributes[:vendor_count]).to be_an(Integer)
+    expect(attributes[:vendor_count]).to eq(1)
   end
 
   # Sad Path
