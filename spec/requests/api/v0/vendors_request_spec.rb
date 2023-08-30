@@ -94,4 +94,71 @@ describe 'GET /api/v0/vendors/:id' do
       expect(response).to have_http_status(500)
     end
   end
+
+  # Update a Vendor
+  describe 'PATCH /api/v0/vendors/:id' do
+    it 'updates an existing vendor with all required attributes' do
+      vendor = create(:vendor)
+
+      valid_attributes = {
+        name: 'Test Vendor 2',
+        description: 'Test Description 2',
+        contact_name: 'Test Contact 2',
+        contact_phone: '123-456-7890',
+        credit_accepted: true
+      }
+      patch "/api/v0/vendors/#{vendor.id}", params: { vendor: valid_attributes }
+
+      expect(response).to have_http_status(200)
+    end
+
+    it 'updates an existing vendor with some required attributes' do
+      vendor = create(:vendor)
+
+      valid_attributes = {
+        name: 'Test Vendor 2',
+        description: 'Test Description 2',
+        contact_name: 'Test Contact 2'
+      }
+      patch "/api/v0/vendors/#{vendor.id}", params: { vendor: valid_attributes }
+
+      expect(response).to have_http_status(200)
+    end
+
+    # Sad Path
+    it 'returns a 400 error if required attributes are missing' do
+      vendor = create(:vendor)
+
+      invalid_attributes = {
+        name: 'Test Vendor 2',
+        description: 'Test Description 2',
+        contact_name: 'Test Contact 2',
+        contact_phone: ''
+      }
+      patch "/api/v0/vendors/#{vendor.id}", params: { vendor: invalid_attributes }
+
+      expect(response).to have_http_status(400)
+
+      errors = JSON.parse(response.body, symbolize_names: true)[:errors]
+      expect(errors).to include("Contact phone can't be blank")
+    end
+
+    it 'returns a 404 error if vendor does not exist' do
+      put '/api/v0/vendors/123123123123', params: {
+        vendor: {
+          name: 'New Name',
+          description: 'New Description',
+          contact_name: 'New Contact',
+          contact_phone: '123-456-7890',
+          credit_accepted: true
+        }
+      }
+
+      expect(response.status).to eq(404)
+      json = JSON.parse(response.body)
+
+      expect(json['errors']).to be_present
+      expect(json['errors'].first['detail']).to eq("Couldn't find Vendor with 'id'=123123123123")
+    end
+  end
 end
