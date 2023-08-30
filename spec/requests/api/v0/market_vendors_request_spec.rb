@@ -83,7 +83,7 @@ describe 'POST /api/v0/market_vendors' do
   it 'returns 422 when a duplicate MarketVendor is created' do
     market = create(:market)
     vendor = create(:vendor)
-    MarketVendor.create(market:, vendor:)
+    MarketVendor.create(market:, vendor:) # Corrected Syntax
 
     post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: vendor.id }
     expect(response).to have_http_status(422)
@@ -95,5 +95,49 @@ describe 'POST /api/v0/market_vendors' do
 
     post '/api/v0/market_vendors', params: { market_id: 1, vendor_id: 1 }
     expect(response).to have_http_status(500)
+  end
+end
+
+# Delete a Market Vendor
+describe 'DELETE /api/v0/market_vendors' do
+  # Happy Path
+  it 'removes a vendor from a market with valid market and vendor IDs' do
+    market = create(:market)
+    vendor = create(:vendor)
+    market_vendor = MarketVendor.create!(market:, vendor:)
+
+    delete '/api/v0/market_vendors', params: { market_vendor: { market_id: market.id, vendor_id: vendor.id } },
+                                     as: :json
+
+    expect(response.status).to eq(204)
+    expect(MarketVendor.exists?(market_id: market.id, vendor_id: vendor.id)).to be_falsey
+  end
+
+  # Sad Path
+  it 'returns a 404 error when invalid market or vendor ID is provided' do
+    non_existing_market_id = 4233
+    non_existing_vendor_id = 11_520
+
+    delete '/api/v0/market_vendors',
+           params: { market_vendor: { market_id: non_existing_market_id, vendor_id: non_existing_vendor_id } }, as: :json
+
+    expect(response.status).to eq(404)
+    expect(JSON.parse(response.body)['errors'][0]['detail']).to eq("No MarketVendor with market_id=#{non_existing_market_id} AND vendor_id=#{non_existing_vendor_id} exists")
+  end
+
+  # Exception Handling
+  it 'returns 500 for internal server error' do
+    market = create(:market)
+    vendor = create(:vendor)
+
+    # Here we are making MarketVendor#destroy raise an error
+    allow_any_instance_of(MarketVendor).to receive(:destroy).and_raise('Something went wrong')
+
+    market_vendor = MarketVendor.create!(market:, vendor:)
+    delete '/api/v0/market_vendors', params: { market_vendor: { market_id: market.id, vendor_id: vendor.id } },
+                                     as: :json
+
+    expect(response.status).to eq(500)
+    expect(JSON.parse(response.body)['errors'][0]['detail']).to eq('Something went wrong')
   end
 end
