@@ -11,7 +11,6 @@ describe 'GET /api/v0/vendors/:id' do
     expect(response).to have_http_status(200)
 
     vendor_data = JSON.parse(response.body, symbolize_names: true)[:data]
-    binding.pry
 
     expect(vendor_data[:id].to_i).to eq(vendor.id)
     expect(vendor_data[:type]).to eq('vendor')
