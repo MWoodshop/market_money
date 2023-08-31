@@ -19,43 +19,10 @@ class Api::V0::MarketsController < ApplicationController
 
   # 10. Search Markets by state, city, and/or name
   def search
-    state = params[:state]
-    city = params[:city]
-    name = params[:name]
-
-    # Validate parameters
-    if city.present? && state.blank?
-      # "city" alone or "city" with "name" is invalid without "state"
-      render json: { errors: [{ detail: 'Invalid set of parameters. Please provide a valid set of parameters to perform a search with this endpoint.' }] },
-             status: :unprocessable_entity
-      return
-    end
-
-    query = Market.all
-
-    query = query.where('state ILIKE ?', "%#{state}%") if state.present?
-    query = query.where('city ILIKE ?', "%#{city}%") if city.present?
-    query = query.where('name ILIKE ?', "%#{name}%") if name.present?
-
-    results = query.map do |market|
-      {
-        id: market.id,
-        type: 'market',
-        attributes: {
-          name: market.name,
-          street: market.street,
-          city: market.city,
-          county: market.county,
-          state: market.state,
-          zip: market.zip,
-          lat: market.lat,
-          lon: market.lon,
-          vendor_count: market.vendors.count
-        }
-      }
-    end
-
+    results = MarketSearchService.new(params).call
     render json: { data: results }, status: :ok
+  rescue ArgumentError => e
+    render json: { errors: [{ detail: e.message }] }, status: :unprocessable_entity
   rescue StandardError => e
     render json: { errors: [{ detail: e.message }] }, status: 500
   end
