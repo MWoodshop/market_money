@@ -123,3 +123,50 @@ describe 'GET /api/v0/markets/:id' do
     expect(response).to have_http_status(500)
   end
 end
+
+# Search Markets by state, city, and/or name
+describe 'Markets API - Search Markets by state, city, and/or name' do
+  before do
+    @market1 = create(:market, name: 'Nob Hill Growers Market', city: 'Albuquerque', state: 'New Mexico')
+    @market2 = create(:market, name: 'Some Other Market', city: 'Albuquerque', state: 'New Mexico')
+    @market3 = create(:market, name: 'Yet Another Market', city: 'Santa Fe', state: 'New Mexico')
+    @market4 = create(:market, name: 'Different State Market', city: 'Some City', state: 'Some State')
+  end
+
+  describe 'GET /api/v0/markets/search' do
+    it 'searches by state and returns HTTP status 200' do
+      get '/api/v0/markets/search', params: { state: 'New Mexico' }
+      expect(response).to have_http_status(:ok)
+      expect(JSON.parse(response.body)['data'].size).to eq(3)
+    end
+
+    it 'searches by state and city and returns HTTP status 200' do
+      get '/api/v0/markets/search', params: { state: 'New Mexico', city: 'Albuquerque' }
+      expect(response).to have_http_status(:ok)
+      expect(JSON.parse(response.body)['data'].size).to eq(2)
+    end
+    # Sad Path
+    it 'returns a 422 status when only city is provided' do
+      get '/api/v0/markets/search', params: { city: 'Albuquerque' }
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(JSON.parse(response.body)['errors'][0]['detail']).to eq('Invalid set of parameters. Please provide a valid set of parameters to perform a search with this endpoint.')
+    end
+
+    it 'returns an empty array when no markets are found' do
+      get '/api/v0/markets/search', params: { state: 'NonExistentState' }
+      expect(response).to have_http_status(:ok)
+      expect(JSON.parse(response.body)['data']).to eq([])
+    end
+
+    # Exception Handling
+    it 'returns a 500 error when something goes wrong on the server' do
+      allow_any_instance_of(ActiveRecord::Relation).to receive(:where).and_raise(StandardError.new('Something went wrong'))
+
+      get '/api/v0/markets/search', params: { state: 'New Mexico', city: 'Albuquerque' }
+
+      expect(response).to have_http_status(500)
+      parsed_response = JSON.parse(response.body, symbolize_names: true)
+      expect(parsed_response[:errors].first[:detail]).to eq('Something went wrong')
+    end
+  end
+end
