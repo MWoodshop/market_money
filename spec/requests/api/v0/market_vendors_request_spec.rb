@@ -160,7 +160,6 @@ describe 'DELETE /api/v0/market_vendors' do
 
     delete '/api/v0/market_vendors',
            params: { market_vendor: { market_id: non_existing_market_id, vendor_id: non_existing_vendor_id } }, as: :json
-    puts JSON.parse(response.body).inspect
 
     expect(response.status).to eq(404)
     expect(JSON.parse(response.body)['errors'][0]).to eq("No MarketVendor with market_id=#{non_existing_market_id} AND vendor_id=#{non_existing_vendor_id} exists")
