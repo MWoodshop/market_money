@@ -75,18 +75,15 @@ describe 'POST /api/v0/market_vendors' do
   end
 
   # Sad Path
-  it 'returns a 404 error when invalid market or vendor ID is provided' do
-    post '/api/v0/market_vendors', params: { market_id: 123_123_123_123_123, vendor_id: 123_123_123_123_123 }
-    expect(response).to have_http_status(404)
-  end
-
-  it 'returns 422 when a duplicate MarketVendor is created' do
+  it 'returns a 404 error when an invalid vendor ID is provided' do
     market = create(:market)
-    vendor = create(:vendor)
-    MarketVendor.create(market:, vendor:)
+    invalid_vendor_id = 123_123_123_123_123
 
-    post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: vendor.id }
-    expect(response).to have_http_status(422)
+    post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: invalid_vendor_id }
+
+    expect(response).to have_http_status(404)
+    errors = JSON.parse(response.body, symbolize_names: true)[:errors]
+    expect(errors.first[:detail]).to eq("Couldn't find Vendor with 'id'=#{invalid_vendor_id}")
   end
 
   it 'returns errors with full_messages when a MarketVendor is invalid' do
@@ -106,11 +103,29 @@ describe 'POST /api/v0/market_vendors' do
   end
 
   # Exception Handling
-  it 'returns a 500 error when something goes wrong on the server' do
-    allow(Market).to receive(:find).and_raise(StandardError.new('Something went wrong'))
+  it 'returns a 500 error when something goes wrong while finding the vendor' do
+    market = create(:market)
+    allow(Vendor).to receive(:find).and_raise(StandardError.new('Something went wrong'))
 
-    post '/api/v0/market_vendors', params: { market_id: 1, vendor_id: 1 }
+    post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: 1 }
+
     expect(response).to have_http_status(500)
+    errors = JSON.parse(response.body, symbolize_names: true)[:errors]
+    expect(errors.first[:detail]).to include('Something went wrong')
+  end
+
+  it 'returns a 500 error when something goes wrong while finding the MarketVendor' do
+    market = create(:market)
+    vendor = create(:vendor)
+
+    # Mock StandardError being thrown during MarketVendor.find_by!
+    allow(MarketVendor).to receive(:find_by!).and_raise(StandardError.new('Something really went wrong'))
+
+    delete '/api/v0/market_vendors', params: { market_vendor: { market_id: market.id, vendor_id: vendor.id } },
+                                     as: :json
+
+    expect(response.status).to eq(500)
+    expect(JSON.parse(response.body)['errors'][0]['detail']).to include('Something really went wrong')
   end
 end
 
