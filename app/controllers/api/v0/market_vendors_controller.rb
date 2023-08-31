@@ -20,7 +20,6 @@ class Api::V0::MarketVendorsController < ApplicationController
       return
     end
 
-    # Check if the market-vendor relationship already exists
     if MarketVendor.exists?(market_id: market.id, vendor_id: vendor.id)
       render json: { errors: ['This vendor is already associated with this market'] }, status: :unprocessable_entity
       return
@@ -28,11 +27,7 @@ class Api::V0::MarketVendorsController < ApplicationController
 
     market_vendor = MarketVendor.new(market:, vendor:)
 
-    if market_vendor.save
-      render json: { message: 'Successfully added vendor to market' }, status: :created
-    else
-      render json: { errors: market_vendor.errors.full_messages }, status: :unprocessable_entity
-    end
+    render json: { message: 'Successfully added vendor to market' }, status: :created if market_vendor.save
   rescue StandardError => e
     render json: { errors: [{ detail: e.message }] }, status: :internal_server_error
   end
@@ -47,7 +42,7 @@ class Api::V0::MarketVendorsController < ApplicationController
 
     if market_vendor
       market_vendor.destroy
-      head :no_content # This sends a 204 status
+      head :no_content
     else
       render json: { errors: [{ detail: "No MarketVendor with market_id=#{market_id} AND vendor_id=#{vendor_id} exists" }] },
              status: 404
