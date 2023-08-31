@@ -5,7 +5,7 @@ class Api::V0::MarketVendorsController < ApplicationController
 
   # 3. Get All Vendors for a Market
   def index
-    render json: MarketVendorSerializer.new(@market.vendors).serializable_hash.to_json, status: :ok
+    render_jsonapi(@market.vendors, MarketVendorSerializer, status: :ok)
   end
 
   # 8. Create a Market Vendor
