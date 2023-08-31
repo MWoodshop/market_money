@@ -1,3 +1,5 @@
+require 'rails_helper'
+
 # Get All Vendors for a Market
 describe 'GET /api/v0/markets/:id/vendors' do
   # Happy Path
@@ -75,18 +77,15 @@ describe 'POST /api/v0/market_vendors' do
   end
 
   # Sad Path
-  it 'returns a 404 error when invalid market or vendor ID is provided' do
-    post '/api/v0/market_vendors', params: { market_id: 123_123_123_123_123, vendor_id: 123_123_123_123_123 }
-    expect(response).to have_http_status(404)
-  end
-
-  it 'returns 422 when a duplicate MarketVendor is created' do
+  it 'returns a 404 error when an invalid vendor ID is provided' do
     market = create(:market)
-    vendor = create(:vendor)
-    MarketVendor.create(market:, vendor:)
+    invalid_vendor_id = 123_123_123_123_123
 
-    post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: vendor.id }
-    expect(response).to have_http_status(422)
+    post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: invalid_vendor_id }
+
+    expect(response).to have_http_status(404)
+    errors = JSON.parse(response.body, symbolize_names: true)[:errors]
+    expect(errors.first[:detail]).to eq("Couldn't find Vendor with 'id'=#{invalid_vendor_id}")
   end
 
   it 'returns errors with full_messages when a MarketVendor is invalid' do
@@ -102,15 +101,31 @@ describe 'POST /api/v0/market_vendors' do
 
     response_body = JSON.parse(response.body, symbolize_names: true)
     expect(response_body).to have_key(:errors)
-    expect(response_body[:errors]).to include('This vendor is already associated with this market')
+    expect(response_body[:errors]).to include(detail: 'This vendor is already associated with this market')
   end
 
   # Exception Handling
-  it 'returns a 500 error when something goes wrong on the server' do
-    allow(Market).to receive(:find).and_raise(StandardError.new('Something went wrong'))
+  it 'returns a 500 error when something goes wrong while finding the vendor' do
+    market = create(:market)
+    allow(Vendor).to receive(:find).and_raise(StandardError.new('Something went wrong'))
 
-    post '/api/v0/market_vendors', params: { market_id: 1, vendor_id: 1 }
+    post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: 1 }
+
     expect(response).to have_http_status(500)
+    errors = JSON.parse(response.body, symbolize_names: true)[:errors]
+    expect(errors.first[:detail]).to include('Something went wrong')
+  end
+
+  it 'returns a 500 error when something goes wrong while finding the MarketVendor' do
+    market = create(:market)
+    vendor = create(:vendor)
+    allow(MarketVendor).to receive(:find_by).and_raise(StandardError.new('Something really went wrong'))
+
+    delete '/api/v0/market_vendors', params: { market_vendor: { market_id: market.id, vendor_id: vendor.id } },
+                                     as: :json
+
+    expect(response.status).to eq(500)
+    expect(JSON.parse(response.body)['errors'][0]['detail']).to include('Something really went wrong')
   end
 end
 
@@ -129,6 +144,15 @@ describe 'DELETE /api/v0/market_vendors' do
     expect(MarketVendor.exists?(market_id: market.id, vendor_id: vendor.id)).to be_falsey
   end
 
+  it 'returns no_content status when destroying a valid market_vendor' do
+    market = create(:market)
+    vendor = create(:vendor)
+    market_vendor = MarketVendor.create!(market:, vendor:)
+
+    result = MarketVendorService.destroy_market_vendor(market_vendor)
+    expect(result[:status]).to eq(:no_content)
+  end
+
   # Sad Path
   it 'returns a 404 error when invalid market or vendor ID is provided' do
     non_existing_market_id = 4233
@@ -138,7 +162,16 @@ describe 'DELETE /api/v0/market_vendors' do
            params: { market_vendor: { market_id: non_existing_market_id, vendor_id: non_existing_vendor_id } }, as: :json
 
     expect(response.status).to eq(404)
-    expect(JSON.parse(response.body)['errors'][0]['detail']).to eq("No MarketVendor with market_id=#{non_existing_market_id} AND vendor_id=#{non_existing_vendor_id} exists")
+    expect(JSON.parse(response.body)['errors'][0]).to eq("No MarketVendor with market_id=#{non_existing_market_id} AND vendor_id=#{non_existing_vendor_id} exists")
+  end
+
+  it 'returns internal_server_error status and error message when there is an error during destroy' do
+    market_vendor = double('MarketVendor')
+    allow(market_vendor).to receive(:destroy!).and_raise(StandardError.new('Some error'))
+
+    result = MarketVendorService.destroy_market_vendor(market_vendor)
+    expect(result[:status]).to eq(:internal_server_error)
+    expect(result[:errors]).to include(detail: 'Some error')
   end
 
   # Exception Handling
