@@ -83,10 +83,26 @@ describe 'POST /api/v0/market_vendors' do
   it 'returns 422 when a duplicate MarketVendor is created' do
     market = create(:market)
     vendor = create(:vendor)
-    MarketVendor.create(market:, vendor:) # Corrected Syntax
+    MarketVendor.create(market:, vendor:)
 
     post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: vendor.id }
     expect(response).to have_http_status(422)
+  end
+
+  it 'returns errors with full_messages when a MarketVendor is invalid' do
+    market = create(:market)
+    vendor = create(:vendor)
+
+    # Create a MarketVendor that would violate the uniqueness constraints
+    MarketVendor.create(market:, vendor:)
+
+    post '/api/v0/market_vendors', params: { market_id: market.id, vendor_id: vendor.id }
+
+    expect(response).to have_http_status(:unprocessable_entity)
+
+    response_body = JSON.parse(response.body, symbolize_names: true)
+    expect(response_body).to have_key(:errors)
+    expect(response_body[:errors]).to include('This vendor is already associated with this market')
   end
 
   # Exception Handling
@@ -130,7 +146,6 @@ describe 'DELETE /api/v0/market_vendors' do
     market = create(:market)
     vendor = create(:vendor)
 
-    # Here we are making MarketVendor#destroy raise an error
     allow_any_instance_of(MarketVendor).to receive(:destroy).and_raise('Something went wrong')
 
     market_vendor = MarketVendor.create!(market:, vendor:)
