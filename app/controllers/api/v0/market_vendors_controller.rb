@@ -1,4 +1,6 @@
 class Api::V0::MarketVendorsController < ApplicationController
+  include MarketVendorsControllerHelper
+
   before_action :set_market, only: %i[index create]
   before_action :set_vendor, only: [:create]
   before_action :set_market_vendor, only: [:destroy]
@@ -10,11 +12,11 @@ class Api::V0::MarketVendorsController < ApplicationController
 
   # 8. Create a Market Vendor
   def create
-    if MarketVendor.exists?(market: @market, vendor: @vendor)
-      render json: { errors: ['This vendor is already associated with this market'] }, status: :unprocessable_entity
+    result = MarketVendorService.create_market_vendor(@market, @vendor)
+    if result[:status] == :unprocessable_entity
+      render json: { errors: result[:errors] }, status: :unprocessable_entity
     else
-      MarketVendor.create!(market: @market, vendor: @vendor)
-      render json: { message: 'Successfully added vendor to market' }, status: :created
+      render json: { message: result[:message] }, status: result[:status] || :internal_server_error
     end
   end
 
@@ -24,38 +26,5 @@ class Api::V0::MarketVendorsController < ApplicationController
     head :no_content
   rescue StandardError => e
     render json: { errors: [{ detail: e.message }] }, status: :internal_server_error
-  end
-
-  private
-
-  def set_market
-    @market = Market.find(params[:market_id])
-  rescue ActiveRecord::RecordNotFound => e
-    render json: { errors: [{ detail: e.message }] }, status: :not_found
-  rescue StandardError => e
-    render json: { errors: [{ detail: e.message }] }, status: :internal_server_error
-  end
-
-  def set_vendor
-    @vendor = Vendor.find(params[:vendor_id])
-  rescue ActiveRecord::RecordNotFound => e
-    render json: { errors: [{ detail: e.message }] }, status: :not_found
-  rescue StandardError => e
-    render json: { errors: [{ detail: e.message }] }, status: :internal_server_error
-  end
-
-  def set_market_vendor
-    params_for_removal = params.require(:market_vendor).permit(:market_id, :vendor_id)
-    @market_id = params_for_removal[:market_id]
-    @vendor_id = params_for_removal[:vendor_id]
-
-    begin
-      @market_vendor = MarketVendor.find_by!(market_id: @market_id, vendor_id: @vendor_id)
-    rescue ActiveRecord::RecordNotFound => e
-      render json: { errors: [{ detail: "No MarketVendor with market_id=#{@market_id} AND vendor_id=#{@vendor_id} exists" }] },
-             status: :not_found
-    rescue StandardError => e
-      render json: { errors: [{ detail: e.message }] }, status: :internal_server_error
-    end
   end
 end
