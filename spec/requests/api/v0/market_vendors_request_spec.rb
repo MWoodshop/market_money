@@ -1,3 +1,5 @@
+require 'rails_helper'
+
 # Get All Vendors for a Market
 describe 'GET /api/v0/markets/:id/vendors' do
   # Happy Path
