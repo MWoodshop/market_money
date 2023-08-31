@@ -9,5 +9,6 @@ RSpec.describe MarketVendor, type: :model do
     it {
       should validate_uniqueness_of(:market_id).scoped_to(:vendor_id).with_message('association between market and vendor already exists')
     }
+    it { should validate_presence_of(:market_id) }
   end
 end
