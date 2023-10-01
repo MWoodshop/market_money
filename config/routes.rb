@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  get '/ping', to: 'application#ping'
+
   namespace :api do
     namespace :v0 do
       resources :markets, only: %i[index show] do
